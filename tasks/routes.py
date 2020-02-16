@@ -3,23 +3,44 @@ from flask import render_template, request, url_for, redirect
 from tasks.forms import TaskForm, ProccesTaskForm
 
 
-import csv
+import sqlite3
 from datetime import date
 
-DATOS = './data/tareas.dat'
-cabecera = ['title', 'description', 'date']
+
+BASE_DATOS = './data/tasks.db'
+
+def dit_factory(cursor, row):
+    d = {}
+    for ix, col in enumerate(cursor.description):
+        d[col[0]] = row[ix]
+    return d
+
+def dbQuery(consulta, *args):
+    conn = sqlite3.connect(BASE_DATOS)
+    conn.row_factory = dit_factory
+
+    cursor = conn.cursor()
+
+    rows = cursor.execute(consulta, args).fetchall()
+
+    if len(rows) == 1:
+        rows = rows[0]
+    elif len(rows) == 0:
+        rows = None
+
+    conn.commit()
+    conn.close()
+
+    return rows
+
 
 @app.route("/")
 def index():
-    fdatos = open(DATOS, 'r')
-    csvreader = csv.reader(fdatos, delimiter=",", quotechar='"')
+    registros = dbQuery('SELECT título, descripcion, fecha, id FROM tareas;')  
 
-    registros = []
-    for linea in csvreader:
-        registros.append(linea)
+    if isinstance(registros, tuple):
+        registros = [registros] 
 
-  
-    fdatos.close()
     return render_template("index.html", registros=registros) 
 
 
@@ -31,16 +52,17 @@ def newTask():
         return render_template("task.html", form=form)
     
     if form.validate():
-        fdatos = open(DATOS, 'a')
-        csvwriter = csv.writer(fdatos, delimiter=",", quotechar='"')
-
         title = request.values.get('title')
         desc = request.values.get('description')
-        date = request.values.get('date')
+        fx = request.values.get('fx')
 
-        csvwriter.writerow([title, desc, date])
+        consulta = """
+        INSERT INTO tareas (título, descripcion, fecha)
+                    VALUES (?, ?, ?);
+        """
 
-        fdatos.close()
+        dbQuery(consulta, title, desc, fx)
+        
         return redirect(url_for("index"))
     else:
         return render_template("task.html", form=form)
@@ -50,43 +72,58 @@ def processTask():
     form = ProccesTaskForm(request.form)
 
     if request.method == 'GET':
-
-        fdatos = open(DATOS, 'r')
-        csvreader = csv.reader(fdatos, delimiter=",", quotechar='"')
-
-        registroAct = None
-        ilinea = 1
-        ix = int(request.values.get('ix'))
-        for linea in csvreader:
-            if ilinea == ix:
-                registroAct = linea
-                break
-            ilinea += 1
-
-        if registroAct:
-            if registroAct[2]:
-                fechaTarea = date(int(registroAct[2][:4]), int(registroAct[2][5:7]), int(registroAct[2][8:]))
-            else:
-                fechaTarea = None
-
-            if 'btnModificar' in request.values:
-                accion = 'M'
-
-            if 'btnBorrar' in request.values:
-                accion = 'B'
-
-
-            form = ProccesTaskForm(data = {'ix': ix, 'title': registroAct[0], 'description': registroAct[1], 'date': fechaTarea, 'btn': accion})
-
+        ix = request.values.get('ix')
+        if ix:
+            registroAct = dbQuery('Select título, descripcion, fecha, id from tareas where id = ?;', ix)
             
+            if registroAct:
+                if registroAct['fecha']:
+                    fechaTarea = date(int(registroAct['fecha'][:4]), int(registroAct['fecha'][5:7]), int(registroAct['fecha'][8:]))
+                else:
+                    fechaTarea = None
 
-        return render_template("processtask.html", form=form)
+                if 'btnModificar' in request.values:
+                    accion = 'M'
+
+                if 'btnBorrar' in request.values:
+                    accion = 'B'
+
+
+                form = ProccesTaskForm(data = {'ix': ix, 'title': registroAct['título'], 'description': registroAct['descripcion'], 'fx': fechaTarea, 'btn': accion})
+
+                return render_template("processtask.html", form=form)
+            else:
+                return redirect(url_for("index"))
+
+    if form.btn.data == 'B':
+        ix = int(request.values.get('ix'))
+        consulta = """
+            DELETE FROM tareas
+            WHERE id = ?;
+        """
+        dbQuery(consulta, ix)
+
+        return redirect(url_for('index'))
     
-    if form.validate():
-        print("Mofificar el fichero")
+    if form.btn.data == 'M':
+        if form.validate():
+            ix = int(request.values.get('ix'))
+            consulta = """
+                UPDATE tareas
+                SET título = ?, descripcion = ?, fecha = ?
+                WHERE id = ?;
+            """
+            dbQuery(consulta, 
+                    request.values.get('title'), 
+                    request.values.get('description'), 
+                    request.values.get('fx'), 
+                    ix)        
+            return redirect(url_for("index"))
+        return render_template("processtask.html", form=form)
 
-    return render_template("processtask.html", form=form)
 
+    
+    
 
    
 
