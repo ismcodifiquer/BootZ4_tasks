@@ -9,6 +9,8 @@ from datetime import date
 
 BASE_DATOS = './data/{}'.format(app.config['DB_FILE'])
 
+
+
 def dit_factory(cursor, row):
     d = {}
     for ix, col in enumerate(cursor.description):
@@ -36,7 +38,7 @@ def dbQuery(consulta, *args):
 
 @app.route("/")
 def index():
-    registros = dbQuery('SELECT título, descripcion, fecha, id FROM tareas;')  
+    registros = dbQuery('SELECT titulo, descripcion, fecha, id FROM tareas;')  
 
     if registros:
         if isinstance(registros, dict):
