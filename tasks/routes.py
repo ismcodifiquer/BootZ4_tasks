@@ -7,7 +7,7 @@ import sqlite3
 from datetime import date
 
 
-BASE_DATOS = './data/tasks.db'
+BASE_DATOS = './data/{}'.format(app.config['DB_FILE'])
 
 def dit_factory(cursor, row):
     d = {}
