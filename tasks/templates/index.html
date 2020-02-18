@@ -1,26 +1,26 @@
-    {% extends "base.html" %}
+{% extends "base.html" %}
 
-    {% block title %} Mis tareas {% endblock %}
-    
-    {% block content %}
+{% block title %} Mis tareas {% endblock %}
+
+{% block content %}
     <h1>Mis tareas</h1>
     <form action="/processtask">
         <table class="u-full-width">
             <tr>
-                <th></th>
+                <th>#</th>
                 <th>Título</th>
                 <th>Descripción</th>
                 <th>Fecha</th>
             </tr>
             {% if registros|length == 0 %}
             <tr>
-                <td colspan="4">No hay tareas</td>
+                <td class="field-error" colspan="4">No hay tareas</td>
             </tr>
             {% endif %}
             {% for tarea in registros %}
             <tr>
-                <td><input type="radio" name="ix" value="{{tarea['id']}}"></td>
-                <td>{{tarea['título']}}</td>
+                <td><input type="radio" name="ix" value="{{tarea['id']}}" ></td>
+                <td>{{tarea['titulo']}}</td>
                 <td>{{tarea['descripcion']}}</td>
                 <td>{{tarea['fecha']}}</td>
             </tr>
@@ -30,4 +30,4 @@
         <button class="button-primary" name="btnBorrar" type="submit">Borrar</button>
         <a class="button button-primary u-pull-right" href="/newtask">Nueva tarea</a>
     </form>
-    {% endblock %}
+{% endblock %}
